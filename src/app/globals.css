@@ -1,0 +1,8 @@
+@import "tailwindcss";
+@import "../../styles.css";
+
+@theme inline {
+  --color-booth-ink: #282621;
+  --color-booth-cream: #f9f5ed;
+  --color-booth-pink: #f2a5aa;
+}
