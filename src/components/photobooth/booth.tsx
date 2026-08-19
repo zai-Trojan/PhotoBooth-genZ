@@ -13,9 +13,8 @@ interface BoothProps {
   userId: string;
   role: "HOST" | "GUEST";
   sessionId: string;
-  frame: string;
   onExit: () => void;
-  onFinished: (compositeUrl: string) => void;
+  onFinished: (uploads: Record<string, string[]>) => void;
 }
 
 export function Booth(props: BoothProps) {
@@ -101,7 +100,6 @@ function BoothInner({
   userId,
   role,
   sessionId,
-  frame,
   onExit,
   onFinished,
 }: BoothProps) {
@@ -121,6 +119,11 @@ function BoothInner({
 
   const supabaseRef = useRef(createClient());
   const channelRef = useRef<any>(null);
+
+  const uploadsRef = useRef<Record<string, string[]>>({});
+  useEffect(() => {
+    uploadsRef.current = uploads;
+  }, [uploads]);
 
   // Take a local frame snapshot from the HTMLVideoElement
   const captureLocalFrame = useCallback((): string | null => {
@@ -242,7 +245,7 @@ function BoothInner({
       });
     } 
     else if (event.type === "SESSION_FINISHED") {
-      onFinished(event.compositePath);
+      onFinished(uploadsRef.current);
     }
   }, [triggerCountdown, onFinished]);
 
@@ -265,124 +268,6 @@ function BoothInner({
       void supabase.removeChannel(channel);
     };
   }, [roomId, handleBoothEvent]);
-
-  // Composing final strip (executed by Host)
-  const composeFinalStrip = useCallback(async (allUploads: Record<string, string[]>) => {
-    setIsComposing(true);
-    try {
-      const canvas = document.createElement("canvas");
-      canvas.width = 900;
-      canvas.height = 1960;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("Could not create canvas context");
-
-      // Draw background
-      const colors: Record<string, string> = {
-        pink: "#edabb0",
-        black: "#292724",
-        cream: "#e9ddc8",
-        sage: "#aebc98",
-        blue: "#aabecd",
-        toystory: "#39a8df",
-        avengers: "#152f55",
-        spiderman: "#c8212c",
-      };
-      ctx.fillStyle = colors[frame] || "#edabb0";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Draw text caption
-      const otherId = Object.keys(allUploads).find((id) => id !== userId) || "Guest";
-      const hostName = name;
-      const guestName = remoteTrack?.participant.name || "Mika";
-
-      ctx.fillStyle = ["black", "avengers", "spiderman"].includes(frame) ? "white" : "#282621";
-      ctx.textAlign = "center";
-      ctx.font = "italic 58px Georgia";
-      ctx.fillText(`${hostName} & ${guestName} ♡`, 450, 85);
-
-      // Helper function to load image
-      const loadImage = (url: string): Promise<HTMLImageElement> => {
-        return new Promise((resolve, reject) => {
-          const img = new Image();
-          if (!url.startsWith("data:")) {
-            img.crossOrigin = "anonymous";
-          }
-          img.onload = () => resolve(img);
-          img.onerror = (e) => reject(e);
-          img.src = url;
-        });
-      };
-
-      // Load all 8 images
-      const hostImages = allUploads[userId] || [];
-      const guestImages = allUploads[otherId] || [];
-
-      const loadedHost: HTMLImageElement[] = [];
-      const loadedGuest: HTMLImageElement[] = [];
-
-      for (let i = 0; i < 4; i++) {
-        if (hostImages[i]) loadedHost[i] = await loadImage(hostImages[i]);
-        if (guestImages[i]) loadedGuest[i] = await loadImage(guestImages[i]);
-      }
-
-      // Draw images onto the strip
-      for (let i = 0; i < 4; i++) {
-        const y = 125 + i * 420;
-        if (loadedHost[i]) {
-          // Draw host on left pane
-          drawImageCover(ctx, loadedHost[i], 35, y, 410, 360);
-        }
-        if (loadedGuest[i]) {
-          // Draw guest on right pane (mirror them to look symmetrical)
-          drawImageCover(ctx, loadedGuest[i], 455, y, 410, 360, true);
-        }
-      }
-
-      // Draw footer info
-      ctx.font = "28px Arial";
-      ctx.fillText(
-        `${new Date().toLocaleDateString("en-GB")} · TOGETHERBOOTH`,
-        450,
-        1905
-      );
-
-      // Upload composite image
-      const base64Composite = canvas.toDataURL("image/jpeg", 0.9);
-      const res = await fetch("/api/photos/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId,
-          participantId: null, // null for composite strip
-          sequence: 1,
-          image: base64Composite,
-          kind: "COMPOSITE",
-        }),
-      });
-
-      if (!res.ok) throw new Error("Composite upload failed");
-      const data = await res.json();
-      const compositeSignedUrl = data.url;
-
-      // Broadcast finished session
-      await channelRef.current.send({
-        type: "broadcast",
-        event: "booth-event",
-        payload: {
-          type: "SESSION_FINISHED",
-          sessionId,
-          compositePath: compositeSignedUrl,
-        },
-      });
-
-      onFinished(compositeSignedUrl);
-
-    } catch (err) {
-      console.error("Error creating strip:", err);
-      setIsComposing(false);
-      setStatusText("Failed to compile photostrip");
-    }
-  }, [frame, userId, name, remoteTrack, sessionId, onFinished]);
 
   // Check if both users have uploaded photo for the current shot sequence
   useEffect(() => {
@@ -410,11 +295,21 @@ function BoothInner({
         // Shoot complete!
         setStatusText("Creating your memories...");
         if (role === "HOST") {
-          composeFinalStrip(uploads);
+          // Broadcast finished session directly without composing
+          channelRef.current.send({
+            type: "broadcast",
+            event: "booth-event",
+            payload: {
+              type: "SESSION_FINISHED",
+              sessionId,
+              compositePath: "",
+            },
+          });
+          onFinished(uploads);
         }
       }
     }
-  }, [uploads, shot, role, userId, composeFinalStrip]);
+  }, [uploads, shot, role, userId, sessionId, onFinished]);
 
   // Host function to schedule and broadcast COUNTDOWN
   const triggerNextCountdown = (nextSeq: number) => {

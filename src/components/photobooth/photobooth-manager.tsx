@@ -17,9 +17,8 @@ export function PhotoboothManager() {
   const [roomCode, setRoomCode] = useState<string>("");
   const [roomId, setRoomId] = useState<string>("");
   const [role, setRole] = useState<"HOST" | "GUEST">("HOST");
-  const [frame, setFrame] = useState<string>("pink");
   const [sessionId, setSessionId] = useState<string>("");
-  const [compositeUrl, setCompositeUrl] = useState<string>("");
+  const [allUploads, setAllUploads] = useState<Record<string, string[]>>({});
 
   // 1. Initialize user ID on client side
   useEffect(() => {
@@ -41,9 +40,8 @@ export function PhotoboothManager() {
   }, []);
 
   // HOST creates a room
-  const handleCreateRoom = async (hostName: string, selectedFrame: string) => {
+  const handleCreateRoom = async (hostName: string) => {
     setName(hostName);
-    setFrame(selectedFrame);
     setRole("HOST");
 
     // Call API to create a room in Neon DB
@@ -110,7 +108,6 @@ export function PhotoboothManager() {
 
     const { room } = await res.json();
     setRoomId(room.id);
-    setFrame(room.frame_id || "pink"); // Fallback to pink if null
     setPage("waiting");
   };
 
@@ -119,13 +116,13 @@ export function PhotoboothManager() {
     setPage("booth");
   };
 
-  const handleFinished = (url: string) => {
-    setCompositeUrl(url);
+  const handleFinished = (uploads: Record<string, string[]>) => {
+    setAllUploads(uploads);
     setPage("result");
   };
 
   const handleRetake = () => {
-    setCompositeUrl("");
+    setAllUploads({});
     setSessionId("");
     // Return to waiting room for a new shoot
     setPage("waiting");
@@ -136,7 +133,7 @@ export function PhotoboothManager() {
     setRoomCode("");
     setRoomId("");
     setSessionId("");
-    setCompositeUrl("");
+    setAllUploads({});
     setPage("entrance");
     // Clear URL param
     if (window.location.search) {
@@ -197,7 +194,6 @@ export function PhotoboothManager() {
           userId={userId}
           role={role}
           sessionId={sessionId}
-          frame={frame}
           onExit={handleExit}
           onFinished={handleFinished}
         />
@@ -206,8 +202,10 @@ export function PhotoboothManager() {
       return (
         <Result
           name={name}
+          userId={userId}
           roomCode={roomCode}
-          compositeUrl={compositeUrl}
+          uploads={allUploads}
+          role={role}
           onRetake={handleRetake}
         />
       );

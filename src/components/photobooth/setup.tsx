@@ -4,23 +4,11 @@ import { FlowNav, Icon, ThemeCharacterArt } from "./common";
 interface SetupProps {
   initialName: string;
   onExit: () => void;
-  onCreateRoom: (name: string, frame: string) => Promise<void>;
+  onCreateRoom: (name: string) => Promise<void>;
 }
-
-const FRAMES = [
-  { slug: "pink", name: "Blush", badge: "" },
-  { slug: "black", name: "Classic", badge: "" },
-  { slug: "cream", name: "Vanilla", badge: "" },
-  { slug: "sage", name: "Sage", badge: "" },
-  { slug: "blue", name: "Cloud", badge: "" },
-  { slug: "toystory", name: "Toy Story", badge: "★" },
-  { slug: "avengers", name: "Avengers", badge: "A" },
-  { slug: "spiderman", name: "Spider-Man", badge: "🕸" },
-];
 
 export function Setup({ initialName, onExit, onCreateRoom }: SetupProps) {
   const [name, setName] = useState(initialName === "Kamu" ? "" : initialName);
-  const [selectedFrame, setSelectedFrame] = useState("pink");
   const [boothType, setBoothType] = useState<"special" | "bestie">("special");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +18,7 @@ export function Setup({ initialName, onExit, onCreateRoom }: SetupProps) {
     setLoading(true);
     setError(null);
     try {
-      await onCreateRoom(finalName, selectedFrame);
+      await onCreateRoom(finalName);
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Failed to create room. Please try again.");
@@ -50,7 +38,7 @@ export function Setup({ initialName, onExit, onCreateRoom }: SetupProps) {
           <h1>
             Make it feel like <em>yours.</em>
           </h1>
-          <p>Choose a name and your favorite frame. You can change everything again before the photos begin.</p>
+          <p>Choose a name and set up your private booth. You can choose a cute frame theme at the end of the photo shoot!</p>
         </section>
         <section className="card">
           <div className="field">
@@ -87,29 +75,6 @@ export function Setup({ initialName, onExit, onCreateRoom }: SetupProps) {
                 <b>☺ My bestie</b>
                 <small>Long-distance friendship memories</small>
               </button>
-            </div>
-          </div>
-
-          <div className="field">
-            <label>Choose a frame</label>
-            <div className="frames">
-              {FRAMES.map((f) => (
-                <button
-                  key={f.slug}
-                  type="button"
-                  className={`frame-choice ${selectedFrame === f.slug ? "active" : ""}`}
-                  onClick={() => setSelectedFrame(f.slug)}
-                  disabled={loading}
-                >
-                  <div className={`frame-mini f-${f.slug}`} data-badge={f.badge}>
-                    <i></i>
-                    <i></i>
-                    <i></i>
-                    <ThemeCharacterArt theme={f.slug} />
-                  </div>
-                  <span>{f.name}</span>
-                </button>
-              ))}
             </div>
           </div>
 
