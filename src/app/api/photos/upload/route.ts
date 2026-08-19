@@ -64,10 +64,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to upload image to storage" }, { status: 502 });
     }
 
-    // 5. Insert into photos table in database
+    // 5. Look up the database participant primary key (id) from user_id and room_id
+    let dbParticipantId: string | null = null;
+    if (participantId) {
+      const participants = await sql`
+        SELECT id FROM participants 
+        WHERE room_id = ${session.room_id} AND user_id = ${participantId}
+        LIMIT 1
+      `;
+      if (participants.length > 0) {
+        dbParticipantId = participants[0].id;
+      } else {
+        return NextResponse.json({ error: "Participant not registered in this room" }, { status: 400 });
+      }
+    }
+
+    // 6. Insert into photos table in database using the correct DB participant ID
     const photos = await sql`
       INSERT INTO photos (session_id, participant_id, sequence, object_path, kind)
-      VALUES (${sessionId}, ${participantId}, ${sequence}, ${objectPath}, ${kind})
+      VALUES (${sessionId}, ${dbParticipantId}, ${sequence}, ${objectPath}, ${kind})
       ON CONFLICT (object_path) 
       DO UPDATE SET created_at = now()
       RETURNING *
