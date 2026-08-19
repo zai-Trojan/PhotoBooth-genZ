@@ -418,7 +418,8 @@ function BoothInner({
 
   // Host function to schedule and broadcast COUNTDOWN
   const triggerNextCountdown = (nextSeq: number) => {
-    const captureAt = new Date(Date.now() + 4500).toISOString(); // 4.5 seconds to capture
+    const captureTime = Date.now() + 4500;
+    const captureAt = new Date(captureTime).toISOString(); // 4.5 seconds to capture
     channelRef.current.send({
       type: "broadcast",
       event: "booth-event",
@@ -428,6 +429,8 @@ function BoothInner({
         captureAt,
       },
     });
+    // Trigger locally on Host's own browser!
+    triggerCountdown(nextSeq, captureTime);
   };
 
   // Host starts the very first capture
