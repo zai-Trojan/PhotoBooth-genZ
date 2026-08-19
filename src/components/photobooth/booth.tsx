@@ -124,24 +124,34 @@ function BoothInner({
 
   // Take a local frame snapshot from the HTMLVideoElement
   const captureLocalFrame = useCallback((): string | null => {
-    if (!containerRef.current) return null;
-    // Find the video element within the local video track container
-    const video = containerRef.current.querySelector(".local-pane video") as HTMLVideoElement | null;
-    if (!video || !video.videoWidth) {
-      console.warn("Local video element not ready for snapshot");
-      return null;
-    }
-
     const canvas = document.createElement("canvas");
     canvas.width = 600;
     canvas.height = 450;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
 
-    // Draw video using object-fit: cover logic (mirror it since it's the user's camera)
-    drawImageCover(ctx, video, 0, 0, canvas.width, canvas.height, true);
+    let success = false;
+    if (containerRef.current) {
+      // Find the video element within the local video track container
+      const video = containerRef.current.querySelector(".local-pane video") as HTMLVideoElement | null;
+      if (video && video.videoWidth) {
+        drawImageCover(ctx, video, 0, 0, canvas.width, canvas.height, true);
+        success = true;
+      }
+    }
+
+    if (!success) {
+      // Fallback: draw a colored placeholder box with user name
+      ctx.fillStyle = "#2d2925";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#fff";
+      ctx.font = "28px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(name || "Me", 300, 225);
+    }
+
     return canvas.toDataURL("image/jpeg", 0.9);
-  }, []);
+  }, [name]);
 
   // Upload image to database/storage and broadcast URL
   const uploadAndBroadcast = useCallback(async (seq: number, base64Image: string) => {
@@ -189,20 +199,31 @@ function BoothInner({
   // Execute countdown visual effect and snapshot
   const triggerCountdown = useCallback(async (seq: number, captureAt: number) => {
     setIsCapturing(true);
-    const delay = captureAt - Date.now();
-
-    // Start tick display
     setStatusText("Get ready!");
-    
-    // Simulate 3, 2, 1 ticks based on remaining time
-    const intervals = [2000, 1000, 0];
-    for (let i = 0; i < intervals.length; i++) {
-      const tickDelay = delay - intervals[i];
-      if (tickDelay > 0) {
-        await new Promise((resolve) => setTimeout(resolve, tickDelay));
+
+    const sleepUntil = async (timestamp: number) => {
+      const delay = timestamp - Date.now();
+      if (delay > 0) {
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
-      setCountdown(3 - i);
-    }
+    };
+
+    // 1. Show "3" at captureAt - 3000ms
+    await sleepUntil(captureAt - 3000);
+    setCountdown(3);
+
+    // 2. Show "2" at captureAt - 2000ms
+    await sleepUntil(captureAt - 2000);
+    setCountdown(2);
+
+    // 3. Show "1" at captureAt - 1000ms
+    await sleepUntil(captureAt - 1000);
+    setCountdown(1);
+
+    // 4. Capture at captureAt
+    await sleepUntil(captureAt);
+    setCountdown(null);
+    setStatusText("Cheese!");
 
     // Flash effect
     if (containerRef.current) {
@@ -211,9 +232,6 @@ function BoothInner({
       containerRef.current.append(flash);
       setTimeout(() => flash.remove(), 600);
     }
-
-    setCountdown(null);
-    setStatusText("Cheese!");
 
     // Capture local snapshot
     const imgData = captureLocalFrame();
