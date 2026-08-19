@@ -125,8 +125,8 @@ function BoothInner({
   // Take a local frame snapshot from the HTMLVideoElement
   const captureLocalFrame = useCallback((): string | null => {
     const canvas = document.createElement("canvas");
-    canvas.width = 600;
-    canvas.height = 450;
+    canvas.width = 400;
+    canvas.height = 300;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
 
@@ -145,34 +145,26 @@ function BoothInner({
       ctx.fillStyle = "#2d2925";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = "#fff";
-      ctx.font = "28px Arial";
+      ctx.font = "20px Arial";
       ctx.textAlign = "center";
-      ctx.fillText(name || "Me", 300, 225);
+      ctx.fillText(name || "Me", 200, 150);
     }
 
-    return canvas.toDataURL("image/jpeg", 0.9);
+    return canvas.toDataURL("image/jpeg", 0.75);
   }, [name]);
 
-  // Upload image to database/storage and broadcast URL
-  const uploadAndBroadcast = useCallback(async (seq: number, base64Image: string) => {
+  // Save image locally and broadcast base64 URL to the other participant
+  const saveAndBroadcast = useCallback(async (seq: number, base64Image: string) => {
+    // 1. Update local uploads state
+    setUploads((prev) => {
+      const next = { ...prev };
+      if (!next[userId]) next[userId] = [];
+      next[userId][seq] = base64Image;
+      return next;
+    });
+
+    // 2. Broadcast photo uploaded event with the base64 image data
     try {
-      const res = await fetch("/api/photos/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId,
-          participantId: userId,
-          sequence: seq + 1, // 1-based sequence
-          image: base64Image,
-          kind: "CAPTURE",
-        }),
-      });
-
-      if (!res.ok) throw new Error("Upload failed");
-      const data = await res.json();
-      const signedUrl = data.url;
-
-      // Broadcast photo uploaded event with the signed URL
       await channelRef.current.send({
         type: "broadcast",
         event: "booth-event",
@@ -180,21 +172,13 @@ function BoothInner({
           type: "PHOTO_UPLOADED",
           sequence: seq,
           participantId: userId,
-          url: signedUrl,
+          url: base64Image,
         },
       });
-
-      // Update local uploads state
-      setUploads((prev) => {
-        const next = { ...prev };
-        if (!next[userId]) next[userId] = [];
-        next[userId][seq] = signedUrl;
-        return next;
-      });
     } catch (err) {
-      console.error("Photo upload error:", err);
+      console.error("Failed to broadcast photo:", err);
     }
-  }, [sessionId, userId]);
+  }, [userId]);
 
   // Execute countdown visual effect and snapshot
   const triggerCountdown = useCallback(async (seq: number, captureAt: number) => {
@@ -236,11 +220,11 @@ function BoothInner({
     // Capture local snapshot
     const imgData = captureLocalFrame();
     if (imgData) {
-      await uploadAndBroadcast(seq, imgData);
+      await saveAndBroadcast(seq, imgData);
     }
 
     setIsCapturing(false);
-  }, [captureLocalFrame, uploadAndBroadcast]);
+  }, [captureLocalFrame, saveAndBroadcast]);
 
   // Handle incoming broadcast events during photo shoot
   const handleBoothEvent = useCallback(async (event: BoothEvent) => {
@@ -320,7 +304,9 @@ function BoothInner({
       const loadImage = (url: string): Promise<HTMLImageElement> => {
         return new Promise((resolve, reject) => {
           const img = new Image();
-          img.crossOrigin = "anonymous";
+          if (!url.startsWith("data:")) {
+            img.crossOrigin = "anonymous";
+          }
           img.onload = () => resolve(img);
           img.onerror = (e) => reject(e);
           img.src = url;
