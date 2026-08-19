@@ -1,5 +1,5 @@
-import { LegacyPhotobooth } from "@/components/photobooth/legacy-photobooth";
+import { PhotoboothManager } from "@/components/photobooth/photobooth-manager";
 
 export default function HomePage() {
-  return <LegacyPhotobooth />;
+  return <PhotoboothManager />;
 }

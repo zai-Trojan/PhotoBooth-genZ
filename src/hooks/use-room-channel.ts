@@ -15,7 +15,7 @@ export function useRoomChannel(
     if (!roomId || !presence) return;
     const supabase = createClient();
     const channel = supabase.channel(roomTopic(roomId), {
-      config: { private: true, presence: { key: presence.participantId } },
+      config: { private: false, presence: { key: presence.participantId } },
     });
 
     channel

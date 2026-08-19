@@ -1,6 +1,6 @@
 import { randomInt } from "node:crypto";
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { sql } from "@/lib/db";
 
 const CODE_WORDS = ["LOVE", "MOON", "DATE", "PINK", "TOYS", "HERO"];
 
@@ -11,16 +11,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "A valid host identity is required" }, { status: 400 });
     }
 
-    const supabase = createAdminClient();
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const code = `${CODE_WORDS[randomInt(CODE_WORDS.length)]}-${randomInt(1000, 10000)}`;
-      const { data, error } = await supabase
-        .from("rooms")
-        .insert({ code, host_id: body.hostId, frame_id: body.frameId ?? null })
-        .select()
-        .single();
-      if (!error) return NextResponse.json({ room: data }, { status: 201 });
-      if (error.code !== "23505") throw error;
+      try {
+        const rooms = await sql`
+          INSERT INTO rooms (code, host_id, frame_id)
+          VALUES (${code}, ${body.hostId}, ${body.frameId ?? null})
+          RETURNING *
+        `;
+        if (rooms.length > 0) {
+          return NextResponse.json({ room: rooms[0] }, { status: 201 });
+        }
+      } catch (error: any) {
+        // Unique violation in Postgres is error code 23505
+        if (error.code !== "23505") throw error;
+      }
     }
     return NextResponse.json({ error: "Could not allocate a room code" }, { status: 503 });
   } catch (error) {
@@ -28,3 +33,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Room service is unavailable" }, { status: 503 });
   }
 }
+
