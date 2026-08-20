@@ -27,6 +27,9 @@ export async function POST(request: Request) {
     if (!image || !image.startsWith("data:image/")) {
       return NextResponse.json({ error: "Invalid image data format" }, { status: 400 });
     }
+    if (image.length > 8000000) {
+      return NextResponse.json({ error: "Image data size exceeds limit" }, { status: 400 });
+    }
 
     // 1. Fetch session to verify it exists and get room ID
     const sessions = await sql`

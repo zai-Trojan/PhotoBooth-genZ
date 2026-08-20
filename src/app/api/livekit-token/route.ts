@@ -1,6 +1,8 @@
 import { AccessToken } from "livekit-server-sdk";
 import { NextResponse } from "next/server";
 
+import { sql } from "@/lib/db";
+
 interface TokenRequest {
   roomName?: string;
   participantName?: string;
@@ -21,6 +23,14 @@ export async function POST(request: Request) {
   const participantId = body.participantId?.trim();
   if (!roomName || !/^[A-Z0-9-]{4,20}$/.test(roomName) || !participantName || !participantId) {
     return NextResponse.json({ error: "Invalid room or participant" }, { status: 400 });
+  }
+
+  // Security Verification: Check if the room exists in Neon DB
+  const rooms = await sql`
+    SELECT id FROM rooms WHERE code = ${roomName} LIMIT 1
+  `;
+  if (rooms.length === 0) {
+    return NextResponse.json({ error: "Room not found or expired" }, { status: 404 });
   }
 
   const token = new AccessToken(apiKey, apiSecret, {
