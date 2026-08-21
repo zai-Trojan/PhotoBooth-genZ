@@ -336,7 +336,7 @@ function BoothInner({
 
   return (
     <main className="booth-page">
-      <FlowNav step={3} onExit={onExit} />
+      <FlowNav step={3} onExit={onExit} theme="dark" />
       <div className="flow-wrap" ref={containerRef}>
         <div className="booth-top">
           <div>
@@ -379,9 +379,9 @@ function BoothInner({
 
           {countdown !== null && (
             <div className="countdown-overlay">
-              <div className="countdown-number">
+              <div className="countdown-number" key={countdown} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
                 <small>Photo {shot + 1} of 4</small>
-                {countdown}
+                <span>{countdown}</span>
               </div>
             </div>
           )}

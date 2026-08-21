@@ -1,35 +1,52 @@
-import React from "react";
+import React, { ReactNode } from "react";
 
-export const ICONS = {
-  arrow: "→",
-  camera: "◉",
-  copy: "⧉",
-  link: "↗",
-  check: "✓",
-  download: "↓",
-  rotate: "↻",
-  users: "♧",
-  heart: "♥",
-  magic: "✦",
+export const ICONS: Record<string, ReactNode> = {
+  arrow: <span>→</span>,
+  camera: <span>◉</span>,
+  copy: <span>⧉</span>,
+  link: <span>↗</span>,
+  check: <span>✓</span>,
+  download: <span>↓</span>,
+  rotate: <span>↻</span>,
+  users: <span>♧</span>,
+  magic: <span>✦</span>,
+  heart: (
+    <svg viewBox="0 0 24 24" fill="currentColor" width="1em" height="1em" style={{ display: "inline-block", verticalAlign: "middle" }}>
+      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+    </svg>
+  ),
 };
 
 export function Icon({ name, className }: { name: keyof typeof ICONS; className?: string }) {
-  return <span className={className}>{ICONS[name] || name}</span>;
+  return <span className={className}>{ICONS[name]}</span>;
 }
 
-export function Brand({ onClick }: { onClick?: () => void }) {
+export function Brand({ onClick, theme = "light" }: { onClick?: () => void; theme?: "light" | "dark" }) {
+  const iconStyle = {
+    height: "54px",
+    width: "54px",
+    borderRadius: "50%",
+    objectFit: "cover" as const
+  };
+
+  const textStyle = {
+    height: "88px",
+    width: "auto",
+    objectFit: "contain" as const
+  };
+
   return (
-    <div className="brand" onClick={onClick} style={{ cursor: onClick ? "pointer" : "default" }}>
-      <span className="brand-mark">tb</span>
-      <span>togetherbooth</span>
+    <div className="brand" onClick={onClick} style={{ cursor: onClick ? "pointer" : "default", display: "flex", alignItems: "center", gap: "10px", height: "48px" }}>
+      <img src="/logo.png" alt="NEAMOR Icon" style={iconStyle} />
+      <img src="/logo-text.png" alt="neamor" style={textStyle} />
     </div>
   );
 }
 
-export function FlowNav({ step, onExit }: { step: number; onExit: () => void }) {
+export function FlowNav({ step, onExit, theme = "light" }: { step: number; onExit: () => void; theme?: "light" | "dark" }) {
   return (
     <div className="flow-wrap flow-nav">
-      <Brand onClick={onExit} />
+      <Brand onClick={onExit} theme={theme} />
       <div className="progress">
         <b>Set up</b>
         <i className={`progress-line ${step > 1 ? "on" : ""}`}></i>

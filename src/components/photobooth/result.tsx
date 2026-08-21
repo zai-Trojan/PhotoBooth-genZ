@@ -7,6 +7,7 @@ interface ResultProps {
   roomCode: string;
   uploads: Record<string, string[]>;
   role: "HOST" | "GUEST";
+  mode?: "solo" | "couple";
   onRetake: () => void;
 }
 
@@ -21,7 +22,7 @@ const FRAMES = [
   { slug: "spiderman", name: "Spider-Man", badge: "🕸" },
 ];
 
-export function Result({ name, userId, roomCode, uploads, role, onRetake }: ResultProps) {
+export function Result({ name, userId, roomCode, uploads, role, mode = "couple", onRetake }: ResultProps) {
   const [selectedFrame, setSelectedFrame] = useState("pink");
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -30,23 +31,26 @@ export function Result({ name, userId, roomCode, uploads, role, onRetake }: Resu
     setTimeout(() => setNotice(null), 2200);
   };
 
-  const otherId = Object.keys(uploads).find((id) => id !== userId) || "Guest";
+  const isSolo = mode === "solo";
+  const otherId = isSolo ? "" : (Object.keys(uploads).find((id) => id !== userId) || "Guest");
   
   const isHost = role === "HOST";
-  const hostId = isHost ? userId : otherId;
-  const guestId = isHost ? otherId : userId;
+  const hostId = isSolo ? userId : (isHost ? userId : otherId);
+  const guestId = isSolo ? "" : (isHost ? otherId : userId);
 
   const hostImages = uploads[hostId] || [];
-  const guestImages = uploads[guestId] || [];
+  const guestImages = guestId ? (uploads[guestId] || []) : [];
 
   const handleDownload = async () => {
     try {
       showNotice("Generating photostrip...");
       const canvas = document.createElement("canvas");
-      canvas.width = 900;
+      canvas.width = isSolo ? 480 : 900;
       canvas.height = 1960;
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("Canvas context failed");
+
+      const cx = isSolo ? 240 : 450;
 
       // Draw background
       const colors: Record<string, string> = {
@@ -69,7 +73,7 @@ export function Result({ name, userId, roomCode, uploads, role, onRetake }: Resu
       ctx.fillStyle = ["black", "avengers", "spiderman"].includes(selectedFrame) ? "white" : "#282621";
       ctx.textAlign = "center";
       ctx.font = "italic 58px Georgia";
-      ctx.fillText("us, from anywhere ♡", 450, 85);
+      ctx.fillText(isSolo ? "me, myself & I ♡" : "us, from anywhere ♡", cx, 85);
 
       const loadImage = (url: string): Promise<HTMLImageElement> => {
         return new Promise((resolve, reject) => {
@@ -80,7 +84,7 @@ export function Result({ name, userId, roomCode, uploads, role, onRetake }: Resu
         });
       };
 
-      // Load all 8 images
+      // Load all images
       const loadedHost: HTMLImageElement[] = [];
       const loadedGuest: HTMLImageElement[] = [];
       for (let i = 0; i < 4; i++) {
@@ -94,23 +98,31 @@ export function Result({ name, userId, roomCode, uploads, role, onRetake }: Resu
         if (loadedHost[i]) {
           drawImageCover(ctx, loadedHost[i], 35, y, 410, 360);
         }
-        if (loadedGuest[i]) {
+        if (!isSolo && loadedGuest[i]) {
           // Mirror guest image symmetrically
           drawImageCover(ctx, loadedGuest[i], 455, y, 410, 360, true);
         }
       }
 
       // Draw cute characters at the bottom
-      await drawCuteCharacters(ctx, selectedFrame, 450, 1810);
+      await drawCuteCharacters(ctx, selectedFrame, cx, 1810);
+
+      // Load and draw NEAMOR logo at the bottom
+      try {
+        const logoImg = await loadImage("/logo.png");
+        ctx.drawImage(logoImg, cx - 25, 1815, 50, 50);
+      } catch (e) {
+        console.warn("Failed to load logo for canvas", e);
+      }
 
       // Draw footer date
       ctx.fillStyle = ["black", "avengers", "spiderman"].includes(selectedFrame) ? "white" : "#282621";
       ctx.font = "28px Arial";
-      ctx.fillText(`${new Date().toLocaleDateString("en-GB")} · TOGETHERBOOTH`, 450, 1905);
+      ctx.fillText(`${new Date().toLocaleDateString("en-GB")} · NEAMOR`, cx, 1905);
 
       // Trigger download
       const link = document.createElement("a");
-      link.download = `togetherbooth-${roomCode}.png`;
+      link.download = `neamor-${roomCode}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
       showNotice("Photostrip downloaded!");
@@ -124,8 +136,8 @@ export function Result({ name, userId, roomCode, uploads, role, onRetake }: Resu
     const shareUrl = window.location.origin + `?room=${roomCode}`;
     if (navigator.share) {
       navigator.share({
-        title: "Our TogetherBooth",
-        text: "Even miles apart, we’re still in the same frame.",
+        title: "Our NEAMOR",
+        text: "Miles apart. Memories together.",
         url: shareUrl,
       });
     } else {
@@ -152,35 +164,37 @@ export function Result({ name, userId, roomCode, uploads, role, onRetake }: Resu
           <b className="confetti c1">✦</b>
           <b className="confetti c2">♡</b>
           <b className="confetti c3">✦</b>
-          <div className={`strip f-${selectedFrame}`} id="strip" style={{ minWidth: "320px" }}>
-            <div className="strip-title" style={{ fontSize: "20px", fontFamily: "Georgia, serif", fontStyle: "italic", textAlign: "center", marginBottom: "10px" }}>
-              us, from anywhere ♡
+          <div className={`strip f-${selectedFrame}`} id="strip" style={{ width: isSolo ? "220px" : "305px", padding: "13px 13px 25px" }}>
+            <div className="strip-title" style={{ fontSize: isSolo ? "16px" : "20px", fontFamily: "Georgia, serif", fontStyle: "italic", textAlign: "center", marginBottom: "10px" }}>
+              {isSolo ? "me, myself & I ♡" : "us, from anywhere ♡"}
             </div>
             
             {/* Render 4 Photos rows */}
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="strip-photo" style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
-                <div className="strip-pane" style={{ width: "150px", height: "115px", backgroundColor: "#333", overflow: "hidden", position: "relative" }}>
+              <div key={i} className="strip-photo" style={{ display: "flex", justifyContent: "center", marginBottom: "8px" }}>
+                <div className="strip-pane" style={{ width: isSolo ? "194px" : "138px", height: isSolo ? "145px" : "103px", backgroundColor: "#333", overflow: "hidden", position: "relative" }}>
                   {hostImages[i] ? (
                     <img src={hostImages[i]} alt="Local capture" className="w-full h-full object-cover" />
                   ) : (
                     <div className="demo-face"></div>
                   )}
                 </div>
-                <div className="strip-pane" style={{ width: "150px", height: "115px", backgroundColor: "#333", overflow: "hidden", position: "relative" }}>
-                  {guestImages[i] ? (
-                    <img src={guestImages[i]} alt="Remote capture" className="w-full h-full object-cover" style={{ transform: "scaleX(-1)" }} />
-                  ) : (
-                    <div className="demo-face"></div>
-                  )}
-                </div>
+                {!isSolo && (
+                  <div className="strip-pane" style={{ width: "138px", height: "103px", backgroundColor: "#333", overflow: "hidden", position: "relative", marginLeft: "6px" }}>
+                    {guestImages[i] ? (
+                      <img src={guestImages[i]} alt="Remote capture" className="w-full h-full object-cover" style={{ transform: "scaleX(-1)" }} />
+                    ) : (
+                      <div className="demo-face"></div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
 
             <ThemeCharacterArt theme={selectedFrame} large={true} />
 
             <div className="strip-footer" style={{ textAlign: "center", fontSize: "10px", marginTop: "15px", opacity: 0.8 }}>
-              {new Date().toLocaleDateString("en-GB")} · togetherbooth
+              {new Date().toLocaleDateString("en-GB")} · NEAMOR
             </div>
           </div>
         </section>

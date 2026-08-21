@@ -7,8 +7,9 @@ import { Join } from "./join";
 import { WaitingRoom } from "./waiting-room";
 import { Booth } from "./booth";
 import { Result } from "./result";
+import { SoloBooth } from "./solo-booth";
 
-type PageState = "entrance" | "setup" | "join" | "waiting" | "booth" | "result";
+type PageState = "entrance" | "setup" | "join" | "waiting" | "booth" | "result" | "solo-booth";
 
 export function PhotoboothManager() {
   const [page, setPage] = useState<PageState>("entrance");
@@ -19,6 +20,7 @@ export function PhotoboothManager() {
   const [role, setRole] = useState<"HOST" | "GUEST">("HOST");
   const [sessionId, setSessionId] = useState<string>("");
   const [allUploads, setAllUploads] = useState<Record<string, string[]>>({});
+  const [boothMode, setBoothMode] = useState<"solo" | "couple">("couple");
 
   // 1. Initialize user ID on client side
   useEffect(() => {
@@ -42,6 +44,10 @@ export function PhotoboothManager() {
   // HOST creates a room
   const handleCreateRoom = async (hostName: string) => {
     setName(hostName);
+    if (boothMode === "solo") {
+      setPage("solo-booth");
+      return;
+    }
     setRole("HOST");
 
     // Call API to create a room in Neon DB
@@ -121,11 +127,24 @@ export function PhotoboothManager() {
     setPage("result");
   };
 
+  const handleSoloClick = () => {
+    setBoothMode("solo");
+    setPage("setup");
+  };
+
+  const handleCoupleClick = () => {
+    setBoothMode("couple");
+    setPage("setup");
+  };
+
   const handleRetake = () => {
     setAllUploads({});
     setSessionId("");
-    // Return to waiting room for a new shoot
-    setPage("waiting");
+    if (boothMode === "solo") {
+      setPage("solo-booth");
+    } else {
+      setPage("waiting");
+    }
   };
 
   const handleExit = () => {
@@ -134,6 +153,7 @@ export function PhotoboothManager() {
     setRoomId("");
     setSessionId("");
     setAllUploads({});
+    setBoothMode("couple");
     setPage("entrance");
     // Clear URL param
     if (window.location.search) {
@@ -144,7 +164,7 @@ export function PhotoboothManager() {
   if (!userId) {
     return (
       <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: "#f9f5ed" }}>
-        <h2>Loading TogetherBooth...</h2>
+        <h2>Loading NEAMOR...</h2>
       </div>
     );
   }
@@ -153,8 +173,9 @@ export function PhotoboothManager() {
     case "entrance":
       return (
         <Entrance
-          onCreateClick={() => setPage("setup")}
+          onCreateClick={handleCoupleClick}
           onJoinClick={() => setPage("join")}
+          onSoloClick={handleSoloClick}
         />
       );
     case "setup":
@@ -163,6 +184,7 @@ export function PhotoboothManager() {
           initialName={name}
           onExit={handleExit}
           onCreateRoom={handleCreateRoom}
+          mode={boothMode}
         />
       );
     case "join":
@@ -198,6 +220,15 @@ export function PhotoboothManager() {
           onFinished={handleFinished}
         />
       );
+    case "solo-booth":
+      return (
+        <SoloBooth
+          name={name}
+          userId={userId}
+          onExit={handleExit}
+          onFinished={handleFinished}
+        />
+      );
     case "result":
       return (
         <Result
@@ -206,6 +237,7 @@ export function PhotoboothManager() {
           roomCode={roomCode}
           uploads={allUploads}
           role={role}
+          mode={boothMode}
           onRetake={handleRetake}
         />
       );

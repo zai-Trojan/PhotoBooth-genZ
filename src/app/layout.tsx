@@ -3,7 +3,7 @@ import "./globals.css";
 import { AnalyticsProvider } from "@/components/providers/analytics-provider";
 
 export const metadata: Metadata = {
-  title: "TogetherBooth — In the same frame",
+  title: "NEAMOR — Miles apart. Memories together.",
   description: "Take photos together, even when you are miles apart.",
 };
 
