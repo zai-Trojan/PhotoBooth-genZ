@@ -5,6 +5,9 @@ import { AnalyticsProvider } from "@/components/providers/analytics-provider";
 export const metadata: Metadata = {
   title: "NEAMOR — Miles apart. Memories together.",
   description: "Take photos together, even when you are miles apart.",
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 export const viewport: Viewport = {
