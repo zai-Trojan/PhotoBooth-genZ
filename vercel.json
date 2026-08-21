@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cleanup?token=neamor_cleanup_default_secret_7382",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}
