@@ -22,6 +22,17 @@ const FRAMES = [
   { slug: "spiderman", name: "Spider-Man", badge: "🕸" },
 ];
 
+const FRAME_COLORS: Record<string, string> = {
+  pink: "#edabb0",
+  black: "#292724",
+  cream: "#e9ddc8",
+  sage: "#aebc98",
+  blue: "#aabecd",
+  toystory: "#39a8df",
+  avengers: "#152f55",
+  spiderman: "#c8212c",
+};
+
 export function Result({ name, userId, roomCode, uploads, role, mode = "couple", onRetake }: ResultProps) {
   const [selectedFrame, setSelectedFrame] = useState("pink");
   const [notice, setNotice] = useState<string | null>(null);
@@ -53,17 +64,7 @@ export function Result({ name, userId, roomCode, uploads, role, mode = "couple",
       const cx = isSolo ? 240 : 450;
 
       // Draw background
-      const colors: Record<string, string> = {
-        pink: "#edabb0",
-        black: "#292724",
-        cream: "#e9ddc8",
-        sage: "#aebc98",
-        blue: "#aabecd",
-        toystory: "#39a8df",
-        avengers: "#152f55",
-        spiderman: "#c8212c",
-      };
-      ctx.fillStyle = colors[selectedFrame] || "#edabb0";
+      ctx.fillStyle = FRAME_COLORS[selectedFrame] || "#edabb0";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Draw frame specific graphics
@@ -164,7 +165,7 @@ export function Result({ name, userId, roomCode, uploads, role, mode = "couple",
           <b className="confetti c1">✦</b>
           <b className="confetti c2">♡</b>
           <b className="confetti c3">✦</b>
-          <div className={`strip f-${selectedFrame}`} id="strip" style={{ width: isSolo ? "220px" : "305px", padding: "13px 13px 25px" }}>
+          <div className={`strip f-${selectedFrame}`} id="strip" style={{ width: isSolo ? "220px" : "305px", padding: "13px 13px 25px", backgroundColor: FRAME_COLORS[selectedFrame] || "#edabb0" }}>
             <div className="strip-title" style={{ fontSize: isSolo ? "16px" : "20px", fontFamily: "Georgia, serif", fontStyle: "italic", textAlign: "center", marginBottom: "10px" }}>
               {isSolo ? "me, myself & I ♡" : "us, from anywhere ♡"}
             </div>
@@ -221,7 +222,7 @@ export function Result({ name, userId, roomCode, uploads, role, mode = "couple",
                   type="button"
                   className={`frame-choice ${selectedFrame === f.slug ? "active" : ""}`}
                   onClick={() => setSelectedFrame(f.slug)}
-                  style={{ display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer", border: "none", background: "none", outline: "none" }}
+                  style={{ display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer", border: "none", background: "none" }}
                 >
                   <div className={`frame-mini f-${f.slug}`} data-badge={f.badge} style={{ width: "45px", height: "60px", borderRadius: "4px", position: "relative" }}>
                     <i></i>
