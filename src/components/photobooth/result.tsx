@@ -13,10 +13,11 @@ interface ResultProps {
 
 const FRAMES = [
   { slug: "pink", name: "Blush", badge: "" },
-  { slug: "black", name: "Classic", badge: "" },
   { slug: "cream", name: "Vanilla", badge: "" },
   { slug: "sage", name: "Sage", badge: "" },
   { slug: "blue", name: "Cloud", badge: "" },
+  { slug: "barbie", name: "Barbie", badge: "♥" },
+  { slug: "nailong", name: "Nailong", badge: "☀" },
   { slug: "toystory", name: "Toy Story", badge: "★" },
   { slug: "avengers", name: "Avengers", badge: "A" },
   { slug: "spiderman", name: "Spider-Man", badge: "🕸" },
@@ -24,13 +25,37 @@ const FRAMES = [
 
 const FRAME_COLORS: Record<string, string> = {
   pink: "#edabb0",
-  black: "#292724",
   cream: "#e9ddc8",
   sage: "#aebc98",
   blue: "#aabecd",
+  barbie: "#f96894",
+  nailong: "#ffe660",
   toystory: "#39a8df",
   avengers: "#152f55",
   spiderman: "#c8212c",
+};
+
+const OVERLAY_CONFIG = {
+  barbie: {
+    slots: [
+      { top: "14.6%", height: "15.8%" },
+      { top: "31.8%", height: "15.7%" },
+      { top: "48.9%", height: "16.1%" },
+      { top: "66.4%", height: "16.0%" },
+    ],
+    photoWidth: "77.4%",
+    photoLeft: "11.3%",
+  },
+  nailong: {
+    slots: [
+      { top: "16.3%", height: "16.9%" },
+      { top: "36.0%", height: "16.8%" },
+      { top: "55.6%", height: "16.9%" },
+      { top: "75.4%", height: "15.9%" },
+    ],
+    photoWidth: "76.2%",
+    photoLeft: "11.9%",
+  },
 };
 
 export function Result({ name, userId, roomCode, uploads, role, mode = "couple", onRetake }: ResultProps) {
@@ -55,9 +80,10 @@ export function Result({ name, userId, roomCode, uploads, role, mode = "couple",
   const handleDownload = async () => {
     try {
       showNotice("Generating photostrip...");
+      const isOverlay = ["barbie", "nailong"].includes(selectedFrame);
       const canvas = document.createElement("canvas");
       canvas.width = isSolo ? 480 : 900;
-      canvas.height = 1960;
+      canvas.height = isOverlay ? 2050 : 1960;
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("Canvas context failed");
 
@@ -66,15 +92,6 @@ export function Result({ name, userId, roomCode, uploads, role, mode = "couple",
       // Draw background
       ctx.fillStyle = FRAME_COLORS[selectedFrame] || "#edabb0";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Draw frame specific graphics
-      drawFrameTheme(ctx, selectedFrame, canvas.width, canvas.height);
-
-      // Draw header title
-      ctx.fillStyle = ["black", "avengers", "spiderman"].includes(selectedFrame) ? "white" : "#282621";
-      ctx.textAlign = "center";
-      ctx.font = "italic 58px Georgia";
-      ctx.fillText(isSolo ? "me, myself & I ♡" : "us, from anywhere ♡", cx, 85);
 
       const loadImage = (url: string): Promise<HTMLImageElement> => {
         return new Promise((resolve, reject) => {
@@ -93,33 +110,87 @@ export function Result({ name, userId, roomCode, uploads, role, mode = "couple",
         if (guestImages[i]) loadedGuest[i] = await loadImage(guestImages[i]);
       }
 
-      // Draw images
-      for (let i = 0; i < 4; i++) {
-        const y = 125 + i * 420;
-        if (loadedHost[i]) {
-          drawImageCover(ctx, loadedHost[i], 35, y, 410, 360);
+      if (isOverlay) {
+        const config = OVERLAY_CONFIG[selectedFrame as "barbie" | "nailong"];
+        
+        for (let i = 0; i < 4; i++) {
+          const slot = config.slots[i];
+          const y = Math.round((parseFloat(slot.top) / 100) * 1960);
+          const h = Math.round((parseFloat(slot.height) / 100) * 1960);
+          
+          if (isSolo) {
+            const dx = Math.round((parseFloat(config.photoLeft) / 100) * 480);
+            const dw = Math.round((parseFloat(config.photoWidth) / 100) * 480);
+            if (loadedHost[i]) {
+              drawImageCover(ctx, loadedHost[i], dx, y, dw, h);
+            }
+          } else {
+            const dxHost = Math.round(((parseFloat(config.photoLeft) / 2) / 100) * 900);
+            const dw = Math.round(((parseFloat(config.photoWidth) / 2) / 100) * 900);
+            const dxGuest = Math.round(((50 + parseFloat(config.photoLeft) / 2) / 100) * 900);
+            
+            if (loadedHost[i]) {
+              drawImageCover(ctx, loadedHost[i], dxHost, y, dw, h);
+            }
+            if (loadedGuest[i]) {
+              drawImageCover(ctx, loadedGuest[i], dxGuest, y, dw, h, true);
+            }
+          }
         }
-        if (!isSolo && loadedGuest[i]) {
-          // Mirror guest image symmetrically
-          drawImageCover(ctx, loadedGuest[i], 455, y, 410, 360, true);
+
+        // Draw the frame PNG overlay on top (stops at 1960, leaving 90px clean space at bottom)
+        const overlayImg = await loadImage(selectedFrame === "barbie" ? "/frame-barbie.png" : "/frame-nailong.png");
+        if (isSolo) {
+          ctx.drawImage(overlayImg, 0, 0, 480, 1960);
+        } else {
+          // Draw side-by-side vertical strips for two users
+          ctx.drawImage(overlayImg, 0, 0, 450, 1960);
+          ctx.drawImage(overlayImg, 450, 0, 450, 1960);
         }
+
+        // Draw footer date and branding in the bottom margin area (Y = 1960 to 2050)
+        ctx.fillStyle = selectedFrame === "barbie" ? "white" : "#282621";
+        ctx.font = "bold 28px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(`${new Date().toLocaleDateString("en-GB")} · NEAMOR`, cx, 2010);
+      } else {
+        // Draw header title
+        ctx.fillStyle = ["black", "avengers", "spiderman"].includes(selectedFrame) ? "white" : "#282621";
+        ctx.textAlign = "center";
+        ctx.font = "italic 58px Georgia";
+        ctx.fillText(isSolo ? "me, myself & I ♡" : "us, from anywhere ♡", cx, 85);
+
+        // Draw standard frame specific graphics
+        drawFrameTheme(ctx, selectedFrame, canvas.width, canvas.height);
+
+        // Draw images in standard positions
+        for (let i = 0; i < 4; i++) {
+          const y = 125 + i * 420;
+          if (loadedHost[i]) {
+            drawImageCover(ctx, loadedHost[i], 35, y, 410, 360);
+          }
+          if (!isSolo && loadedGuest[i]) {
+            // Mirror guest image symmetrically
+            drawImageCover(ctx, loadedGuest[i], 455, y, 410, 360, true);
+          }
+        }
+
+        // Draw cute characters at the bottom
+        await drawCuteCharacters(ctx, selectedFrame, cx, 1810);
+
+        // Load and draw NEAMOR logo at the bottom
+        try {
+          const logoImg = await loadImage("/logo.png");
+          ctx.drawImage(logoImg, cx - 25, 1815, 50, 50);
+        } catch (e) {
+          console.warn("Failed to load logo for canvas", e);
+        }
+
+        // Draw footer date
+        ctx.fillStyle = ["black", "avengers", "spiderman"].includes(selectedFrame) ? "white" : "#282621";
+        ctx.font = "28px Arial";
+        ctx.fillText(`${new Date().toLocaleDateString("en-GB")} · NEAMOR`, cx, 1905);
       }
-
-      // Draw cute characters at the bottom
-      await drawCuteCharacters(ctx, selectedFrame, cx, 1810);
-
-      // Load and draw NEAMOR logo at the bottom
-      try {
-        const logoImg = await loadImage("/logo.png");
-        ctx.drawImage(logoImg, cx - 25, 1815, 50, 50);
-      } catch (e) {
-        console.warn("Failed to load logo for canvas", e);
-      }
-
-      // Draw footer date
-      ctx.fillStyle = ["black", "avengers", "spiderman"].includes(selectedFrame) ? "white" : "#282621";
-      ctx.font = "28px Arial";
-      ctx.fillText(`${new Date().toLocaleDateString("en-GB")} · NEAMOR`, cx, 1905);
 
       // Trigger download
       const link = document.createElement("a");
@@ -165,13 +236,27 @@ export function Result({ name, userId, roomCode, uploads, role, mode = "couple",
           <b className="confetti c1">✦</b>
           <b className="confetti c2">♡</b>
           <b className="confetti c3">✦</b>
-          <div className={`strip f-${selectedFrame}`} id="strip" style={{ width: isSolo ? "220px" : "305px", padding: "13px 13px 25px", backgroundColor: FRAME_COLORS[selectedFrame] || "#edabb0" }}>
-            <div className="strip-title" style={{ fontSize: isSolo ? "16px" : "20px", fontFamily: "Georgia, serif", fontStyle: "italic", textAlign: "center", marginBottom: "10px" }}>
-              {isSolo ? "me, myself & I ♡" : "us, from anywhere ♡"}
-            </div>
+          <div 
+            className={`strip f-${selectedFrame}`} 
+            id="strip" 
+            style={{ 
+              width: isSolo ? "220px" : (["barbie", "nailong"].includes(selectedFrame) ? "440px" : "305px"), 
+              height: ["barbie", "nailong"].includes(selectedFrame) ? "690px" : "auto",
+              padding: ["barbie", "nailong"].includes(selectedFrame) ? "0" : "13px 13px 25px", 
+              backgroundColor: FRAME_COLORS[selectedFrame] || "#edabb0",
+              position: "relative",
+              overflow: "hidden"
+            }}
+          >
+            {/* Standard frame header */}
+            {!["barbie", "nailong"].includes(selectedFrame) && (
+              <div className="strip-title" style={{ fontSize: isSolo ? "16px" : "20px", fontFamily: "Georgia, serif", fontStyle: "italic", textAlign: "center", marginBottom: "10px" }}>
+                {isSolo ? "me, myself & I ♡" : "us, from anywhere ♡"}
+              </div>
+            )}
             
-            {/* Render 4 Photos rows */}
-            {Array.from({ length: 4 }).map((_, i) => (
+            {/* Standard frame photo rows */}
+            {!["barbie", "nailong"].includes(selectedFrame) && Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="strip-photo" style={{ display: "flex", justifyContent: "center", marginBottom: "8px", height: "auto", backgroundColor: "transparent" }}>
                 <div className="strip-pane" style={{ width: isSolo ? "194px" : "138px", height: isSolo ? "145px" : "103px", backgroundColor: "transparent", overflow: "hidden", position: "relative" }}>
                   {hostImages[i] ? (
@@ -200,11 +285,127 @@ export function Result({ name, userId, roomCode, uploads, role, mode = "couple",
               </div>
             ))}
 
-            <ThemeCharacterArt theme={selectedFrame} large={true} />
+            {/* Overlay frame photos (Absolute Positioned behind transparent slots - constrained to 660px height) */}
+            {["barbie", "nailong"].includes(selectedFrame) && (
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "660px" }}>
+                {Array.from({ length: 4 }).map((_, i) => {
+                  const config = OVERLAY_CONFIG[selectedFrame as "barbie" | "nailong"];
+                  const slot = config.slots[i];
+                  return (
+                    <React.Fragment key={i}>
+                      {/* Host Photo */}
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: slot.top,
+                          height: slot.height,
+                          left: isSolo ? config.photoLeft : (parseFloat(config.photoLeft) / 2) + "%",
+                          width: isSolo ? config.photoWidth : (parseFloat(config.photoWidth) / 2) + "%",
+                          backgroundColor: "#333",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {hostImages[i] ? (
+                          <img
+                            src={hostImages[i]}
+                            alt="Local capture"
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          />
+                        ) : (
+                          <div className="demo-face"></div>
+                        )}
+                      </div>
 
-            <div className="strip-footer" style={{ textAlign: "center", fontSize: "10px", marginTop: "15px", opacity: 0.8 }}>
-              {new Date().toLocaleDateString("en-GB")} · NEAMOR
-            </div>
+                      {/* Guest Photo */}
+                      {!isSolo && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: slot.top,
+                            height: slot.height,
+                            left: (50 + parseFloat(config.photoLeft) / 2) + "%",
+                            width: (parseFloat(config.photoWidth) / 2) + "%",
+                            backgroundColor: "#333",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {guestImages[i] ? (
+                            <img
+                              src={guestImages[i]}
+                              alt="Remote capture"
+                              style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scaleX(-1)" }}
+                            />
+                          ) : (
+                            <div className="demo-face"></div>
+                          )}
+                        </div>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Overlay frame images on top of everything (constrained to 660px height) */}
+            {isSolo && selectedFrame === "barbie" && (
+              <img src="/frame-barbie.png" alt="Barbie Overlay" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "660px", pointerEvents: "none", zIndex: 5 }} />
+            )}
+            {isSolo && selectedFrame === "nailong" && (
+              <img src="/frame-nailong.png" alt="Nailong Overlay" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "660px", pointerEvents: "none", zIndex: 5 }} />
+            )}
+            {!isSolo && selectedFrame === "barbie" && (
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "660px", display: "flex", pointerEvents: "none", zIndex: 5 }}>
+                <img src="/frame-barbie.png" alt="Barbie Left Overlay" style={{ width: "50%", height: "100%" }} />
+                <img src="/frame-barbie.png" alt="Barbie Right Overlay" style={{ width: "50%", height: "100%" }} />
+              </div>
+            )}
+            {!isSolo && selectedFrame === "nailong" && (
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "660px", display: "flex", pointerEvents: "none", zIndex: 5 }}>
+                <img src="/frame-nailong.png" alt="Nailong Left Overlay" style={{ width: "50%", height: "100%" }} />
+                <img src="/frame-nailong.png" alt="Nailong Right Overlay" style={{ width: "50%", height: "100%" }} />
+              </div>
+            )}
+
+            {/* Standard frame chibi character arts */}
+            {!["barbie", "nailong"].includes(selectedFrame) && (
+              <ThemeCharacterArt theme={selectedFrame} large={true} />
+            )}
+
+            {/* Frame footer date and branding */}
+            {["barbie", "nailong"].includes(selectedFrame) ? (
+              <div 
+                className="strip-footer" 
+                style={{ 
+                  position: "absolute", 
+                  bottom: 0, 
+                  left: 0, 
+                  right: 0, 
+                  height: "30px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "10px", 
+                  opacity: 0.9,
+                  zIndex: 6,
+                  color: selectedFrame === "barbie" ? "white" : "#282621",
+                  fontWeight: "bold"
+                }}
+              >
+                {new Date().toLocaleDateString("en-GB")} · NEAMOR
+              </div>
+            ) : (
+              <div 
+                className="strip-footer" 
+                style={{ 
+                  textAlign: "center", 
+                  fontSize: "10px", 
+                  marginTop: "15px", 
+                  opacity: 0.8 
+                }}
+              >
+                {new Date().toLocaleDateString("en-GB")} · NEAMOR
+              </div>
+            )}
           </div>
         </section>
 

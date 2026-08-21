@@ -78,7 +78,7 @@ export function ThemeCharacterArt({ theme, large = false }: { theme: string; lar
             <circle fill="#f2bd8c" cx="48" cy="43" r="20" />
             <circle fill="#29231f" cx="41" cy="43" r="2.5" />
             <circle fill="#29231f" cx="55" cy="43" r="2.5" />
-            <path fill="none" stroke="#9d4f4a" stroke-width="2" d="M41 51q7 6 14 0" />
+            <path fill="none" stroke="#9d4f4a" strokeWidth="2" d="M41 51q7 6 14 0" />
             <path fill="#f0bd27" d="M25 61q23-14 46 0v24H25z" />
             <path fill="#d73535" d="m38 59 10 10 10-10-10-6z" />
             <circle fill="#fff" cx="65" cy="69" r="6" />
@@ -147,8 +147,8 @@ export function ThemeCharacterArt({ theme, large = false }: { theme: string; lar
           </g>
           <g>
             <circle fill="#cf2530" cx="48" cy="41" r="25" />
-            <path fill="#fff" stroke="#202020" stroke-width="2" d="m30 34 14 5-10 10zM66 34l-14 5 10 10z" />
-            <g fill="none" stroke="#2d2927" stroke-width="1.4">
+            <path fill="#fff" stroke="#202020" strokeWidth="2" d="m30 34 14 5-10 10zM66 34l-14 5 10 10z" />
+            <g fill="none" stroke="#2d2927" strokeWidth="1.4">
               <path d="M48 16v50M25 27l46 28M71 27L25 55" />
               <path d="M31 22q17 15 34 0M25 40q23 13 46 0" />
             </g>
@@ -158,11 +158,11 @@ export function ThemeCharacterArt({ theme, large = false }: { theme: string; lar
           </g>
           <g>
             <circle fill="#17191d" cx="135" cy="41" r="25" />
-            <path fill="#f5f5f5" stroke="#d82232" stroke-width="3" d="m116 33 15 6-11 11zM154 33l-15 6 11 11z" />
+            <path fill="#f5f5f5" stroke="#d82232" strokeWidth="3" d="m116 33 15 6-11 11zM154 33l-15 6 11 11z" />
             <path fill="#16181c" d="M109 64q26-17 52 0v21h-52z" />
             <path fill="#d72332" d="M109 70h52v6h-52z" />
             <path fill="#d72332" d="m135 62 5 8-5 10-5-10z" />
-            <g fill="none" stroke="#d72332" stroke-width="1.4">
+            <g fill="none" stroke="#d72332" strokeWidth="1.4">
               <path d="M135 16v49M115 26l40 29M155 26l-40 29" />
             </g>
           </g>
