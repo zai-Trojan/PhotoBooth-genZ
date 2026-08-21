@@ -31,9 +31,6 @@ export function SoloBooth({ name, userId, onExit, onFinished }: SoloBoothProps) 
       .then((s) => {
         activeStream = s;
         setStream(s);
-        if (videoRef.current) {
-          videoRef.current.srcObject = s;
-        }
       })
       .catch((err) => {
         console.error("Camera access failed", err);
@@ -46,6 +43,13 @@ export function SoloBooth({ name, userId, onExit, onFinished }: SoloBoothProps) 
       }
     };
   }, []);
+
+  // Bind stream to video element when it mounts
+  useEffect(() => {
+    if (stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [stream]);
 
   const captureFrame = (): string => {
     if (!videoRef.current) return "";
