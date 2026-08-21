@@ -172,7 +172,7 @@ export function Result({ name, userId, roomCode, uploads, role, mode = "couple",
             
             {/* Render 4 Photos rows */}
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="strip-photo" style={{ display: "flex", justifyContent: "center", marginBottom: "8px", height: "auto" }}>
+              <div key={i} className="strip-photo" style={{ display: "flex", justifyContent: "center", marginBottom: "8px", height: "auto", backgroundColor: "transparent" }}>
                 <div className="strip-pane" style={{ width: isSolo ? "194px" : "138px", height: isSolo ? "145px" : "103px", backgroundColor: "transparent", overflow: "hidden", position: "relative" }}>
                   {hostImages[i] ? (
                     <img 

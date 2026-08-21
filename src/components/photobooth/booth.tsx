@@ -245,7 +245,8 @@ function BoothInner({
       });
     } 
     else if (event.type === "SESSION_FINISHED") {
-      onFinished(uploadsRef.current);
+      const finalUploads = (event as any).uploads || uploadsRef.current;
+      onFinished(finalUploads);
     }
   }, [triggerCountdown, onFinished]);
 
@@ -295,14 +296,14 @@ function BoothInner({
         // Shoot complete!
         setStatusText("Creating your memories...");
         if (role === "HOST") {
-          // Broadcast finished session directly without composing
+          // Broadcast finished session directly with the complete uploads map
           channelRef.current.send({
             type: "broadcast",
             event: "booth-event",
             payload: {
               type: "SESSION_FINISHED",
               sessionId,
-              compositePath: "",
+              uploads,
             },
           });
           onFinished(uploads);
